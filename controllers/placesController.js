@@ -2,6 +2,13 @@ const axios = require("axios");
 //Se importa el modelo creado
 const { createPlace } = require("../models/placeModel");
 
+//Se importa el modelo para la base de datos
+const Place = require("../models/placeDbModel");
+
+const api_geo_code = process.env.API_GEOCODE;
+const api_nearby_search = process.env.API_NEARBY_SEARCH;
+const api_place_details = process.env.API_PLACE_DETAILS
+
 //Función que va a servir para obtener la información de los lugares
 const getPlaces = async (req, res) => {
   // Se obtiene el lugar que viene del request
@@ -14,7 +21,7 @@ const getPlaces = async (req, res) => {
   try {
     // Función para obtener las coordenadas del lugar proporcionado, se utiliza la api de geocoding
     const geocodeResponse = await axios.get(
-      `https://maps.googleapis.com/maps/api/geocode/json`,
+      api_geo_code,
       {
         params: {
           address: query,
@@ -39,7 +46,7 @@ const getPlaces = async (req, res) => {
     // Función para buscar lugares de un tipo específico (por ejemplo buscar tipo hoteles)
     const fetchPlacesByType = async (type) => {
       const response = await axios.get(
-        `https://maps.googleapis.com/maps/api/place/nearbysearch/json`,
+        api_nearby_search,
         {
           params: {
             location: locationStr, //Cordenadas
@@ -61,7 +68,7 @@ const getPlaces = async (req, res) => {
     // Aplanar la lista de resultados y obtener detalles de los lugares de la api place details
     const places = results.flat().map(async (result) => {
       const detailsResponse = await axios.get(
-        `https://maps.googleapis.com/maps/api/place/details/json`,
+        api_place_details,
         {
           params: {
             place_id: result.place_id, //id del lugar
@@ -85,17 +92,51 @@ const getPlaces = async (req, res) => {
       );
     });
 
+    
     //Se crea un arreglo que almacena todos lugares con su respectiva información
     const placesWithDetails = await Promise.all(places);
 
-    //Se devuelven los resultados como un objeto json
-    res.json(placesWithDetails);
-  } catch (error) {
-    //Manejo de errores
-    console.error(error);
-    res.status(500).json({ error: "Failed to fetch places" });
+      //Se llama la función para ingresar datos a la base de dato
+      placesDB(placesWithDetails);
+
+      //Se devuelven los resultados como un objeto json
+      res.json(placesWithDetails);
+    } catch (error) {
+      //Manejo de errores
+      console.error(error);
+      res.status(500).json({ error: "Failed to fetch places" });
+    }
+  };
+  
+  //Funcion para validar si los lugares esta en la db o ingresarlos
+  const placesDB = async (places) => {
+  
+    for (const place of places) {
+  
+      const placeExist = await Place.findOne({address:place.address})
+  
+      if (placeExist) {
+        console.log('place exist');
+        continue;
+      }
+   
+      try {
+        const newPlace = await Place.create({
+          name: place.name,
+          address:place.address,
+          rating: place.rating.toString(),
+          description: place.description,
+          type: place.type
+        })
+        console.log('New place added to db');
+      } catch (error) {
+        console.log(error);
+      }
+  
+    }
+  
   }
-};
+  
 
 module.exports = {
   getPlaces,
