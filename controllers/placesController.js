@@ -72,9 +72,6 @@ const getPlaces = async (req, res) => {
           city = component.long_name
         }
       }
-      // console.log(address_components);
-      console.log(city);
-      console.log(country)
       
       await getPlaceTripAvisor(
         detailsGoogle.name,
