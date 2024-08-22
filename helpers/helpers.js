@@ -43,7 +43,7 @@ const fetchPlacesByType = async (type, locationStr) => {
   return response.data.results
     .filter((place) => place.rating >= 4)
     .sort((a, b) => a - b)
-    .slice(0, 3); // Limitar a los primeros 10 resultados
+    .slice(0, 10); // Limitar a los primeros 10 resultados
 };
 
 const cleanText = (text) => {
@@ -51,32 +51,36 @@ const cleanText = (text) => {
     console.log(text);
     console.error("Expected a string as input");
   }
-
-  return text
+  text = text
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+  console.log(text);
+  return text;
 };
 
 const validationPlace = (name1, city1, country1, name2, city2, country2) => {
+  const nameIncluded1 = cleanText(name1).includes(cleanText(name2));
+  const nameIncluded2 = cleanText(name2).includes(cleanText(name1));
   if (
     cleanText(city1) === cleanText(city2) &&
-    cleanText(country1) === cleanText(country2) &&
-    cleanText(name1) === cleanText(name2)
+    cleanText(country1) === cleanText(country2)
   ) {
-    return true;
-  } else if (
-    cleanText(name1).includes(name2) === true ||
-    cleanText(name2).includes(name1) === true
-  ) {
-    return true;
+    if (
+      cleanText(name1) === cleanText(name2) ||
+      nameIncluded1 ||
+      nameIncluded2
+    ) {
+      return true;
+    } else {
+      return false;
+    }
   } else {
     return false;
   }
 };
 
 const getPlaceTripAvisor = async (name, city, country) => {
-
   const api_key = process.env.API_KEY_TA;
   const api_location_tripAdvisor = process.env.API_LOCATION_SEARCH_TA;
   const dominio = process.env.NOMBRE_DOMINIO;
@@ -145,23 +149,11 @@ const getPlaceDetailsTripAdvisor = async (id) => {
   try {
     const response = await axios.get(endpoint, { params, headers });
     const place = response.data;
-    console.log(place);
-    //     console.log(`
-    // ${place.name}
-    // ${place.description ? place.description : "description not available"}
-    // ${place.latitude ? place.latitude : "Latitude not available"}
-    // ${place.longitude ? place.longitude : "Longitude not available"}
-    // ${place.amenities ? place.amenities : "Amenities not available"}
-    //       `);
-    // // ${
-    //   place.hours.weekday_text
-    //     ? place.hours.weekday_text
-    //     : "Schedule not awailable"
-    // }
-    // place.trip_types.forEach((prop) => {
-    //   console.log(prop.localized_name);
-    // });
-    // return place;
+    // console.log(place);
+    // console.log(
+    //   "------------------------------------------------------------------------------------"
+    // );
+    return place;
   } catch (error) {
     console.error(
       "Error al hacer la solicitud a la API de TripAdvisor:",
@@ -170,11 +162,60 @@ const getPlaceDetailsTripAdvisor = async (id) => {
   }
 };
 
+const getNearbyAttractions = async (city) => {
+  const api_key = process.env.API_KEY_TA;
+  const api_location_tripAdvisor = process.env.API_LOCATION_SEARCH_TA;
+  const dominio = process.env.NOMBRE_DOMINIO;
+
+  if (!city) {
+    console.error("Please send the city name");
+  }
+  city = cleanText(city);
+  const endpoint = api_location_tripAdvisor;
+  const params = {
+    key: api_key,
+    searchQuery: city,
+    category: "attractions",
+    radius: 5,
+    radiusUnit: "km",
+  };
+
+  const headers = {
+    origin: dominio,
+    Referer: dominio, // Reemplaza con tu dominio autorizado
+  };
+
+  try {
+    const response = await axios.get(endpoint, { params, headers });
+    const places = Object.values(response.data).flat();
+    const attractionsPlaces = [];
+    for (const place of places) {
+      let details = await getPlaceDetailsTripAdvisor(place.location_id);
+      delete details.rating_image_url;
+      delete details.photo_count;
+      delete details.see_all_photos;
+      delete details.neighborhood_info;
+      attractionsPlaces.push(details);
+    }
+    console.log(attractionsPlaces);
+
+    // return place;
+  } catch (error) {
+    console.error(
+      "Error al hacer la solicitud a la API de TripAdvisor:",
+      error.message
+    );
+    throw error; // Lanzar el error para manejarlo en otro lugar si es necesario
+  }
+};
+
 // Función para buscar lugares de un tipo específico (por ejemplo buscar tipo hoteles)
-// getPlaceTripAvisor("Hotel Nutibara", "Medellín","Colombia");
+// getPlaceTripAvisor("HotelHotel Acqua Medellín", "Medellín", "Colombia");
+getNearbyAttractions("Medellin");
 
 module.exports = {
+  fetchPlacesByType,
   placesDB,
   getPlaceTripAvisor,
-  fetchPlacesByType,
+  getNearbyAttractions,
 };
