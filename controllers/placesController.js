@@ -1,21 +1,11 @@
-const axios = require("axios");
-//Se importa el modelo creado
-const { createPlace } = require("../models/placeModel");
-
+//Se importan las funciones necesarias del helpers
 const {
-  fetchPlacesByType,
   placesDB,
   searchPlacesTripAdvisor,
   getNearbyAttractions,
   getCoordinates,
-  geocodeGoogleMaps,
 } = require("../helpers/helpers");
 
-//Se importa el modelo para la base de datos
-// const Place = require("../models/placeDbModel");
-
-const api_geo_code = process.env.API_GEOCODE;
-const api_place_details = process.env.API_PLACE_DETAILS;
 
 //Función que va a servir para obtener la información de los lugares
 const getPlaces = async (req, res) => {
@@ -27,71 +17,39 @@ const getPlaces = async (req, res) => {
   }
 
   try {
-    // Función para obtener las coordenadas del lugar proporcionado conla api de geocoding de google maps
-    // const geocodeResponse = geocodeGoogleMaps(city)
-
-    //Se extrae un objeto con la latitud y logitud
-    // const location = geocodeResponse.data.results[0].geometry.location;
-
-    //Se almacenan las cordenades en la variable
-    // const locationStr = `${location.lat},${location.lng}`;
-
-    // Realizar búsquedas para cada tipo de lugar
-    // const placeRequests = types.map((type) =>
-    //   fetchPlacesByType(type, locationStr)
-    // );
-    // Arreglo que almacena todos los resultados de las peticiones anteriores
-    // const results = await Promise.all(placeRequests);
-
-    // Aplanar la lista de resultados y obtener detalles de los lugares de la api place details
-    // const places = results.flat().map(async (result) => {
-    //   const detailsResponse = await axios.get(api_place_details, {
-    //     params: {
-    //       place_id: result.place_id, //id del lugar
-    //       key: process.env.API_KEY
-    //     },
-    //   });
-
-    //   // Variable que extrae los resultados de la petición a la api
-    //   const detailsGoogle = detailsResponse.data.result;
-
-    //   const address_components = detailsGoogle.address_components;
-
-    // return createPlace(
-    //   //se crea un objeto place en base al modelo con la información extraida de la api
-    //   detailsGoogle.name,
-    //   detailsGoogle.formatted_address,
-    //   detailsGoogle.rating ? detailsGoogle.rating : "No rating available",
-    //   detailsGoogle.website ? detailsGoogle.website : "Website not available",
-    //   detailsGoogle.formatted_phone_number
-    //     ? detailsGoogle.formatted_phone_number
-    //     : "Phone number not available",
-    //   detailsGoogle.editorial_summary
-    //     ? detailsGoogle.editorial_summary.overview
-    //     : "No description available",
-    //   detailsGoogle.types // Agregar el tipo de lugar al objeto
-    // );
-    // });
-
-    //Se crea un arreglo que almacena todos lugares con su respectiva información
+    //Se llama a la función getCoordinates, se le pasa la ciudad y el país. 
+    //Por ultimo se almacenan las coordenadas.
     const coordinates = await getCoordinates(city, country);
 
-    console.log(coordinates);
+    //Se llama a la función searchPlacesTripAdvisor, se le pasan las coordenadas y los tipos de lugares.
+    //Finalmente se almacenan los lugares encontrados.
+    const places = await searchPlacesTripAdvisor(coordinates, types);
 
-    const places = await searchPlacesTripAdvisor(coordinates, types)
+    //Se llama a la función searchPlacesTripAdvisor, se le pasan las coordenadas y los tipos de lugares.
+    //Finalmente se almacenan las atracciones encontradas.
+    const attractions = await getNearbyAttractions(city);
 
+    console.log(places);
+    console.log(attractions);
+    
+    try {
+      // Se llama la funcion placesDB para almacenar los datos en dynamoDB
+      //  await placesDB(places.flat())
+      //  await placesDB(attractions.flat())
+    } catch (error) {
+      console.error(error);
+    }
 
-    // const placesWithDetails = await Promise.all(places);
-
-    //Se devuelven los resultados como un objeto json
-    res.json(places);
+    //Si todo funciona correctamente se devuelve todo ok
+    res.json("Todo ok");
   } catch (error) {
-    //Manejo de errores
+    //En caso de error se manda un mensaje por consola y se devuelve un esta 500 junto con otro mensaje
     console.error(error);
     res.status(500).json({ error: "Failed to fetch places" });
   }
 };
 
+//Se exporta el endpoint 
 module.exports = {
   getPlaces,
 };
