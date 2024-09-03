@@ -117,7 +117,7 @@ los objetos retornados de la petición a la api.
 
 ## Autores
 
--[Juan Manuel Montoya](https://github.com/githubjuanmanuel) 
--[Jhon Anderson Marin](https://github.com/samoyedo15)
+- Juan Manuel Montoya [GitHub](https://github.com/githubjuanmanuel) [LinkedIn](https://www.linkedin.com/in/juan-manuel-montoya-montoya-03767a26a/)
+- Jhon Anderson Marin [GitHub](https://github.com/samoyedo15) [LinkedIn](https://www.linkedin.com/in/jhon-anderson-marin-marin-2752b3125/)
 
 Las pasantías se realizaron en ByLogic
